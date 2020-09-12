@@ -6,6 +6,7 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn import svm
 from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
 
 import os
 
@@ -36,19 +37,18 @@ class Visual_BOW():
         for image_type in subfolders:
             images_in_subfolder = os.listdir('101_ObjectCategories/'+image_type)
             for img in images_in_subfolder:
-                print(img) 
                 cv2_img = cv2.imread('101_ObjectCategories/'+image_type+'/'+img)
                 cv2_gray_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
                 sift = cv2.xfeatures2d.SIFT_create()
-                key_points = sift.detect(gray,None)
+                key_points = sift.detect(cv2_gray_img,None)
+                key_points = key_points[:self.k]
+                print(key_points)
                 features.append(key_points)
                 labels.append(image_type)
-                
 
-        train_features, train_labels, test_features, test_labels = 0,0,0,0
-
-
+        train_features, train_labels, test_features, test_labels = train_test_split(features, labels, test_size=0.3)
         return train_features, train_labels, test_features, test_labels
+
 
     def create_dictionary(self, features):
         '''
