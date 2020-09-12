@@ -29,10 +29,23 @@ class Visual_BOW():
             test_features: list/array of size n_images_test x k x feature_dim
             test_labels: list/array of size n_images_test
         '''
-        image_categories = os.walk('101_ObjectCategories')
-        print(image_categories)
-        #for image_type in i
 
+        subfolders = os.listdir('101_ObjectCategories')
+        features=[]
+        labels=[]
+        for image_type in subfolders:
+            images_in_subfolder = os.listdir('101_ObjectCategories/'+image_type)
+            for img in images_in_subfolder:
+                print(img) 
+                cv2_img = cv2.imread('101_ObjectCategories/'+image_type+'/'+img)
+                cv2_gray_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+                sift = cv2.xfeatures2d.SIFT_create()
+                key_points = sift.detect(gray,None)
+                features.append(key_points)
+                labels.append(image_type)
+                
+
+        train_features, train_labels, test_features, test_labels = 0,0,0,0
 
 
         return train_features, train_labels, test_features, test_labels
@@ -126,8 +139,8 @@ class Visual_BOW():
         return accuracy
 
 if __name__ == "__main__":
-    l = os.walk('101_ObjectCategories')
-    print(l)
+    alg = Visual_BOW(k=20, dictionary_size=50)
+    alg.extract_sift_features()
 
 
     #alg = Visual_BOW(k=20, dictionary_size=50)
