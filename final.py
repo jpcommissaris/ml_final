@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import random
 import matplotlib.pyplot as plt
+import matplotlib
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn import svm
 from sklearn.metrics import accuracy_score
@@ -14,7 +15,9 @@ class Visual_BOW():
     def __init__(self, k=20, dictionary_size=50):
         self.k = k  # number of SIFT features to extract from every image
         self.dictionary_size = dictionary_size  # size of your "visual dictionary" (k in k-means)
-        self.n_tests = 1  # how many times to re-run the same algorithm (to obtain average accuracy)
+        self.n_tests = 5  # how many times to re-run the same algorithm (to obtain average accuracy)
+        self.curr_test = 1
+        self.colors = {}
 
     def extract_sift_features(self):
         '''
@@ -34,9 +37,11 @@ class Visual_BOW():
         subfolders = os.listdir('./101_ObjectCategories')
         images_arr=[]
         labels=[]
+        self.colors = {}
         for folders, image_type in enumerate(subfolders):
-            if(folders<5):
+            if(folders):
                 images_in_subfolder = os.listdir('./101_ObjectCategories/'+image_type)
+                self.colors[image_type] = ((folders+10)/120, (folders+10)/120, 1-(folders+20)/200)
                 if(image_type=='BACKGROUND_GOOGLE'):
                     continue
                 for img in images_in_subfolder:
@@ -145,12 +150,36 @@ class Visual_BOW():
             features: new features (converted using the dictionary) of size n_images x dictionary_size
             labels: list/array of size n_images
         '''
+        #pca
         pca = PCA(n_components=2)
         pca.fit(features)
         components = pca.components_.transpose()
         transformed = np.dot(features,components)
         feature1, feature2 = zip(*transformed)
-       
+        
+        #plot
+        plt.xlabel('Feature 1')
+        plt.ylabel('Feature 2')
+        plt.title('Features with after PC=2 tranformation')
+
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        for i in range(len(feature1)):
+            ax.plot(feature1[i], feature2[i], 'o', color=self.colors[labels[i]])
+        
+
+        if not os.path.exists('./plots'):
+            os.makedirs('./plots')
+
+        dir_name = f'./plots/plot-k={self.k}-dict_size={self.dictionary_size}'  
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+        fname=f'plt-t{self.curr_test}'
+        plt.savefig(dir_name+'/'+fname+'.png')
+        self.curr_test+=1
+
+        #change to be directory based ^
         return 0
 
 
@@ -175,6 +204,15 @@ class Visual_BOW():
         return accuracy
 
 if __name__ == "__main__":
-    alg = Visual_BOW(k=20, dictionary_size=50)
-    accuracy = alg.algorithm()
-    print("Final accuracy of the model is:", accuracy)
+    alg1 = Visual_BOW(k=2, dictionary_size=10)
+    alg2 = Visual_BOW(k=2, dictionary_size=50)
+    alg3 = Visual_BOW(k=2, dictionary_size=200)
+
+    accuracy1 = alg1.algorithm()
+    accuracy2 = alg2.algorithm()
+    accuracy3 = alg3.algorithm()
+    print('')
+    print("Final accuracy for k=2, dict_size=10:", accuracy1)
+    print("Final accuracy for k=2, dict_size=50:", accuracy2)
+    print("Final accuracy for k=2, dict_size=200:", accuracy3)
+    print('')
