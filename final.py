@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import random
-import matplotlib
+import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn import svm
 from sklearn.metrics import accuracy_score
@@ -14,7 +14,7 @@ class Visual_BOW():
     def __init__(self, k=20, dictionary_size=50):
         self.k = k  # number of SIFT features to extract from every image
         self.dictionary_size = dictionary_size  # size of your "visual dictionary" (k in k-means)
-        self.n_tests = 10  # how many times to re-run the same algorithm (to obtain average accuracy)
+        self.n_tests = 1  # how many times to re-run the same algorithm (to obtain average accuracy)
 
     def extract_sift_features(self):
         '''
@@ -35,7 +35,7 @@ class Visual_BOW():
         images_arr=[]
         labels=[]
         for folders, image_type in enumerate(subfolders):
-            if(folders<3):
+            if(folders<5):
                 images_in_subfolder = os.listdir('./101_ObjectCategories/'+image_type)
                 if(image_type=='BACKGROUND_GOOGLE'):
                     continue
@@ -47,7 +47,8 @@ class Visual_BOW():
                     if(key_points):
                         images_arr.append(np.array(descriptors[:self.k]))
                         labels.append(image_type)
-        train_features, train_labels, test_features, test_labels = train_test_split(images_arr, labels, test_size=0.3)
+        train_features, test_features, train_labels, test_labels = train_test_split(images_arr, labels, test_size=0.3)
+        print('finished feature extraction')
         return train_features, train_labels, test_features, test_labels
 
 
@@ -69,6 +70,7 @@ class Visual_BOW():
                 for sift_feature in image:
                     flattned_list.append(sift_feature)
         kmeans = KMeans(n_clusters=self.dictionary_size, random_state=0).fit(flattned_list)
+        print('finished kmeans')
         return kmeans
 
     def convert_features_using_dictionary(self, kmeans, features):
@@ -93,7 +95,6 @@ class Visual_BOW():
                 feature_from_dic[closet_center_index[0]] += 1
             features_new.append(feature_from_dic)   
 
-
         return features_new
 
     def train_svm(self, inputs, labels):
@@ -109,6 +110,7 @@ class Visual_BOW():
         '''
         clf = svm.SVC()
         clf.fit(inputs, labels)
+        print('finished clf')
         return clf
 
     def test_svm(self, clf, inputs, labels):
@@ -123,6 +125,13 @@ class Visual_BOW():
         Output:
             accuracy: percent of correctly predicted samples
         '''
+        predictions = clf.predict(inputs)
+        correct = 0
+        total = len(predictions)
+        for i in range(total):
+            if(predictions[i]==labels[i]):
+                correct+=1
+        accuracy = correct / total
         return accuracy
 
     def save_plot(self, features, labels):
@@ -136,6 +145,12 @@ class Visual_BOW():
             features: new features (converted using the dictionary) of size n_images x dictionary_size
             labels: list/array of size n_images
         '''
+        pca = PCA(n_components=2)
+        pca.fit(features)
+        components = pca.components_.transpose()
+        transformed = np.dot(features,components)
+        feature1, feature2 = zip(*transformed)
+       
         return 0
 
 
@@ -160,6 +175,6 @@ class Visual_BOW():
         return accuracy
 
 if __name__ == "__main__":
-    alg = Visual_BOW(k=10, dictionary_size=20)
+    alg = Visual_BOW(k=20, dictionary_size=50)
     accuracy = alg.algorithm()
     print("Final accuracy of the model is:", accuracy)
