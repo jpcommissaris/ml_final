@@ -6,8 +6,8 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn import svm
 from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split
 
+from sklearn.model_selection import train_test_split
 import os
 
 class Visual_BOW():
@@ -31,22 +31,23 @@ class Visual_BOW():
             test_labels: list/array of size n_images_test
         '''
 
-        subfolders = os.listdir('101_ObjectCategories')
-        features=[]
+        subfolders = os.listdir('./101_ObjectCategories')
+        images_arr=[]
         labels=[]
-        for image_type in subfolders:
-            images_in_subfolder = os.listdir('101_ObjectCategories/'+image_type)
-            for img in images_in_subfolder:
-                cv2_img = cv2.imread('101_ObjectCategories/'+image_type+'/'+img)
-                cv2_gray_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
-                sift = cv2.xfeatures2d.SIFT_create()
-                key_points = sift.detect(cv2_gray_img,None)
-                key_points = key_points[:self.k]
-                print(key_points)
-                features.append(key_points)
-                labels.append(image_type)
-
-        train_features, train_labels, test_features, test_labels = train_test_split(features, labels, test_size=0.3)
+        for folders, image_type in enumerate(subfolders):
+            if(folders<3):
+                images_in_subfolder = os.listdir('./101_ObjectCategories/'+image_type)
+                if(image_type=='BACKGROUND_GOOGLE'):
+                    continue
+                for img in images_in_subfolder:
+                    cv2_img = cv2.imread('./101_ObjectCategories/'+image_type+'/'+img)
+                    cv2_gray_img = cv2.cvtColor(cv2_img, cv2.COLOR_BGR2GRAY)
+                    sift = cv2.xfeatures2d.SIFT_create()
+                    (key_points, descriptors) = sift.detectAndCompute( cv2_gray_img, None)
+                    if(key_points):
+                        images_arr.append(np.array(descriptors[:self.k]))
+                        labels.append(image_type)
+        train_features, train_labels, test_features, test_labels = train_test_split(images_arr, labels, test_size=0.3)
         return train_features, train_labels, test_features, test_labels
 
 
@@ -63,6 +64,11 @@ class Visual_BOW():
         Output:
             kmeans: trained k-means object (algorithm trained on the flattened feature list)
         '''
+        flattned_list = []
+        for image in features: 
+                for sift_feature in image:
+                    flattned_list.append(sift_feature)
+        kmeans = KMeans(n_clusters=self.dictionary_size, random_state=0).fit(flattned_list)
         return kmeans
 
     def convert_features_using_dictionary(self, kmeans, features):
@@ -78,6 +84,16 @@ class Visual_BOW():
         Output:
             features_new: list/array of size n_images x dictionary_size
         '''
+        features_new=[]
+        kmeans_centers = list(kmeans.cluster_centers_)
+        for image in features:
+            feature_from_dic = [0] * self.dictionary_size
+            for descriptor in image:
+                closet_center_index = kmeans.predict([descriptor])
+                feature_from_dic[closet_center_index[0]] += 1
+            features_new.append(feature_from_dic)   
+
+
         return features_new
 
     def train_svm(self, inputs, labels):
@@ -91,6 +107,8 @@ class Visual_BOW():
         Output:
             clf: trained svm classifier object (algorithm trained on the inputs/labels data)
         '''
+        clf = svm.SVC()
+        clf.fit(inputs, labels)
         return clf
 
     def test_svm(self, clf, inputs, labels):
@@ -118,6 +136,9 @@ class Visual_BOW():
             features: new features (converted using the dictionary) of size n_images x dictionary_size
             labels: list/array of size n_images
         '''
+        return 0
+
+
 
 ############################################################################
 ################## DO NOT MODIFY ANYTHING BELOW THIS LINE ##################
@@ -139,10 +160,6 @@ class Visual_BOW():
         return accuracy
 
 if __name__ == "__main__":
-    alg = Visual_BOW(k=20, dictionary_size=50)
-    alg.extract_sift_features()
-
-
-    #alg = Visual_BOW(k=20, dictionary_size=50)
-    #accuracy = alg.algorithm()
-    #print("Final accuracy of the model is:", accuracy)
+    alg = Visual_BOW(k=10, dictionary_size=20)
+    accuracy = alg.algorithm()
+    print("Final accuracy of the model is:", accuracy)
